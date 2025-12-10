@@ -1,5 +1,5 @@
 export async function getEmail(email: string) {
-  const response = await fetch("http://192.168.0.102:3000/api/users/email", {
+  const response = await fetch("http://10.130.91.206:3000/api/users/email", {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -20,7 +20,7 @@ export async function getEmail(email: string) {
 }
 
 export async function getPhone(phone: string) {
-  const response = await fetch("http://192.168.0.102:3000/api/users/phone", {
+  const response = await fetch("http://10.130.91.206:3000/api/users/phone", {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -41,7 +41,7 @@ export async function getPhone(phone: string) {
 }
 
 export async function getOTP(phone: string) {
-  const response = await fetch("http://192.168.0.102:3000/api/auth/sent-otp", {
+  const response = await fetch("http://10.130.91.206:3000/api/auth/sent-otp", {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -64,7 +64,7 @@ export async function getOTP(phone: string) {
 export async function verifyOTP(phone: string, code: string) {
   console.log(phone, code);
   const response = await fetch(
-    "http://192.168.0.102:3000/api/auth/verify-otp",
+    "http://10.130.91.206:3000/api/auth/verify-otp",
     {
       method: "POST",
       headers: {
@@ -88,7 +88,7 @@ export async function verifyOTP(phone: string, code: string) {
 }
 
 export async function login(phone: string, password: string) {
-  const response = await fetch("http://192.168.0.102:3000/api/auth/login", {
+  const response = await fetch("http://10.130.91.206:3000/api/auth/login", {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -115,7 +115,7 @@ export async function signup(
   email: string,
   password: string
 ) {
-  const response = await fetch("http://192.168.0.102:3000/api/auth/signup", {
+  const response = await fetch("http://10.130.91.206:3000/api/auth/signup", {
     method: "POST",
     headers: {
       Accept: "application/json",
