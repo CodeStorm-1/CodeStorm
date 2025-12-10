@@ -115,7 +115,9 @@ export default function NamePage() {
             <Text className="text-gray-600 dark:text-gray-400">
               Already have an account?{" "}
             </Text>
-            <TouchableOpacity onPress={() => router.push("./signin")}>
+            <TouchableOpacity
+              onPress={() => router.push("/(auth)/login-email/emailPage")}
+            >
               <Text className="text-blue-600 dark:text-blue-400 font-semibold">
                 Sign in
               </Text>

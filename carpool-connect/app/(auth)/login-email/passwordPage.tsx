@@ -12,10 +12,16 @@ import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Lock } from "lucide-react-native";
 import Toast from "react-native-toast-message";
+import { useEmailLoginStore } from "@/store/email-login-store";
+import { login } from "@/app/config/api";
+import { useAuthStore } from "@/store/auth-store";
+import { useSignupStore } from "@/store/signup-store";
 
 export default function SignInPasswordPage() {
   // Retrieve the email passed from the previous screen
-  const { userEmail } = useLocalSearchParams<{ userEmail: string }>();
+  const userEmail = useEmailLoginStore((s) => s.email);
+  const setToken = useAuthStore((state) => state.setToken);
+  const setField = useSignupStore((s) => s.setField);
 
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,6 +35,25 @@ export default function SignInPasswordPage() {
         text2: "Please enter your password.",
       });
     }
+
+    console.log(userEmail, password);
+
+    const resp = await login(userEmail!, password);
+
+    if (resp.error) {
+      Toast.show({
+        type: "error",
+        text1: "Sign In Failed",
+        // @ts-ignore
+        text2: resp.error,
+      });
+      return;
+    }
+
+    setToken(resp.token);
+    setField("email", resp.email);
+    setField("name", resp.name);
+    setField("phone", resp.phone);
 
     setLoading(true);
 

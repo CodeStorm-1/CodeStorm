@@ -12,10 +12,13 @@ import { Stack, router } from "expo-router";
 import { useState } from "react";
 import { Mail } from "lucide-react-native";
 import Toast from "react-native-toast-message";
+import { getEmail } from "@/app/config/api";
+import { useEmailLoginStore } from "@/store/email-login-store";
 
 export default function SignInEmailPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const setField = useEmailLoginStore((state) => state.setField);
 
   const handleNext = async () => {
     // 1. Client-Side Validation
@@ -26,7 +29,19 @@ export default function SignInEmailPage() {
         text2: "Please enter a valid email address.",
       });
     }
+    const resp = await getEmail(email);
 
+    if (resp.error === "User not found") {
+      Toast.show({
+        type: "error",
+        text1: "Sign In Failed",
+        // @ts-ignore
+        text2: "Could not find an account with that email.",
+      });
+      return;
+    }
+
+    setField("email", email);
     setLoading(true);
 
     try {

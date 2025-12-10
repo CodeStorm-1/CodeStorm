@@ -87,7 +87,7 @@ export async function verifyOTP(phone: string, code: string) {
   return data;
 }
 
-export async function login(phone: string, password: string) {
+export async function login(email: string, password: string) {
   const response = await fetch("http://10.130.91.206:3000/api/auth/login", {
     method: "POST",
     headers: {
@@ -95,7 +95,7 @@ export async function login(phone: string, password: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      phone: `+91${phone}`,
+      email: email,
       password: password,
     }),
   });

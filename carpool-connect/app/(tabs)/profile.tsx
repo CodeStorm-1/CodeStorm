@@ -105,17 +105,6 @@ export default function Profile() {
             activeOpacity={0.7}
             className="bg-zinc-900/90 backdrop-blur-2xl rounded-2xl px-6 py-5 flex-row items-center border border-zinc-800 shadow-2xl"
           >
-            <MaterialIcons name="directions-car" size={24} color="#0ea5e9" />
-            <Text className="text-white font-semibold ml-4 flex-1 text-base">
-              Add Vehicle
-            </Text>
-            <Feather name="chevron-right" size={24} color="#64748b" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.7}
-            className="bg-zinc-900/90 backdrop-blur-2xl rounded-2xl px-6 py-5 flex-row items-center border border-zinc-800 shadow-2xl"
-          >
             <Feather name="lock" size={24} color="#a78bfa" />
             <Text className="text-white font-semibold ml-4 flex-1 text-base">
               Change Password

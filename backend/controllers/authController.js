@@ -35,9 +35,9 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { phone, password } = req.body;
+    const { email, password } = req.body;
 
-    const user = await User.findOne({ phone });
+    const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ error: "Invalid credentials" });
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -46,7 +46,11 @@ export const login = async (req, res) => {
     // Generate JWT
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "30d" });
 
-    res.json({ user, token });
+    // Convert Mongoose document → plain object
+    const userObj = user.toObject();
+    delete userObj.password;
+
+    res.json({ user: userObj, token });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
