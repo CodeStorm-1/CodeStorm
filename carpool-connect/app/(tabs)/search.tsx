@@ -1,7 +1,10 @@
 import { router } from "expo-router";
 import { View, Text, TouchableOpacity, TextInput } from "react-native";
 import { AntDesign, FontAwesome5 } from "@expo/vector-icons"; // Assuming you have expo-vector-icons installed
+import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import StarryBackground from "@/components/StarryBackground";
+import Constants from "expo-constants";
+const GOOGLE_API = Constants.expoConfig?.extra?.MAPS_API;
 
 export default function HomeScreen() {
   // Mock function for the search action
@@ -27,10 +30,16 @@ export default function HomeScreen() {
             {/* Departure Input */}
             <View className="flex-row items-center border-b border-gray-200 dark:border-zinc-600 py-3">
               <FontAwesome5 name="map-marker-alt" size={20} color="#EF4444" />
-              <TextInput
-                placeholder="Leaving from..."
-                placeholderTextColor="#888"
-                className="flex-1 ml-3 text-lg text-gray-800 dark:text-white"
+              <GooglePlacesAutocomplete
+                placeholder="Search"
+                onPress={(data, details = null) => {
+                  // 'details' is provided when fetchDetails = true
+                  console.log(data, details);
+                }}
+                query={{
+                  key: GOOGLE_API,
+                  language: "en",
+                }}
               />
             </View>
 

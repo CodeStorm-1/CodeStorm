@@ -1,5 +1,4 @@
 import Constants from "expo-constants";
-
 const URL = Constants.expoConfig?.extra?.API_URL;
 
 console.log(URL);

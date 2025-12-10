@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.swayam-1104.carpoolconnect"
     },
     "extra": {
-      "API_URL": "http://10.130.91.206:3000/api"
+      "API_URL": "http://10.130.91.206:3000/api",
+      "MAPS_API": "AIzaSyBvjcPaK4ZXgLeLjKNZN6i2NamuiHuhDdU"
     },
     "android": {
       "adaptiveIcon": {
