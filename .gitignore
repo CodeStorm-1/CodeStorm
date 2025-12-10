@@ -1,0 +1,79 @@
+# ========================
+#        Node / General
+# ========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
+logs/
+
+# Don't push env files
+.env
+.env.*
+*.env
+**/*.env
+
+# Build output (TS, Babel, custom)
+dist/
+build/
+out/
+
+# ========================
+#       Expo / React Native
+# ========================
+.expo/
+.expo-shared/
+.expo-google-services/
+.expo-packager-cache/
+.expo-cache/
+
+# Metro bundler cache
+.cache/
+expo-web-build/
+web-build/
+
+# Native android / ios folders (only if using pure Expo)
+android/
+ios/
+
+# ========================
+#        OS / Editor
+# ========================
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# IDE & editor
+.vscode/
+.idea/
+*.swp
+
+# ========================
+#       Backend (Express)
+# ========================
+backend/node_modules/
+backend/dist/
+backend/build/
+
+# ========================
+#       Expo App Folder
+# ========================
+carpool-connect/node_modules/
+carpool-connect/dist/
+carpool-connect/build/
+carpool-connect/web-build/
+carpool-connect/.expo/
+carpool-connect/.expo-shared/
+carpool-connect/.cache/
+
+# ========================
+#   Keys & sensitive files
+# ========================
+*.jks
+*.p12
+*.key
+*.pem
+*.crt
