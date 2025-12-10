@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "react-native-modal-datetime-picker": "^18.0.0"
+  }
+}

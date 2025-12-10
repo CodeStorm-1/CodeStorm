@@ -8,10 +8,12 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  FlatList,
 } from "react-native";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
 // -----------------------------------------------------------------
 // Refactored DestinationInput Component (for Pickup/Drop)
@@ -22,6 +24,8 @@ interface DestinationInputProps {
   onChangeText: (text: string) => void;
   onClear: () => void;
 }
+
+const GOOGLE_API_KEY = "AIzaSyBvjcPaK4ZXgLeLjKNZN6i2NamuiHuhDdU"; // Replace with your key
 
 const DestinationInput: React.FC<DestinationInputProps> = ({
   type,
@@ -62,16 +66,51 @@ const DestinationInput: React.FC<DestinationInputProps> = ({
   </View>
 );
 
+interface PlacePrediction {
+  place_id: string;
+  description: string;
+  main_text: string;
+}
 // -----------------------------------------------------------------
 // Main PublishScreen Component
 // -----------------------------------------------------------------
 export default function PublishScreen() {
   const { top, bottom } = useSafeAreaInsets();
+  const router = useRouter();
 
   const [pickup, setPickup] = useState<string>("");
+  const [pickupInfo, setPickupInfo] = useState<string>("");
   const [drop, setDrop] = useState<string>("");
+  const [sourcePredictions, setSourcePredictions] = useState<PlacePrediction[]>(
+    []
+  );
+  const [destPredictions, setDestPredictions] = useState<PlacePrediction[]>([]);
+  const [openPickupModal, setOpenPickupModal] = useState(false);
+  const [openDropModal, setOpenDropModal] = useState(false);
 
   const isSaveEnabled = pickup.trim().length > 0 && drop.trim().length > 0;
+
+  const fetchPlacePredictions = async (input: string, isSource: boolean) => {
+    if (input.length < 3) return;
+
+    try {
+      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+        input
+      )}&key=${GOOGLE_API_KEY}&language=en&components=country:in`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      const predictions = data.predictions || [];
+      if (isSource) {
+        setSourcePredictions(predictions);
+      } else {
+        setDestPredictions(predictions);
+      }
+    } catch (error) {
+      console.error("Error fetching predictions:", error);
+    }
+  };
 
   return (
     <View className="flex-1 bg-black">
@@ -107,15 +146,44 @@ export default function PublishScreen() {
 
           {/* ----- Destination Inputs (using the new component) ----- */}
           {/* COMBINED both inputs into a single View with space-y-4 */}
-          <View className="space-y-4 gap-6">
+          <View className="space-y-4 gap-6 my-4">
             {/* Pickup Input */}
             <DestinationInput
               type="Pickup"
-              value={pickup}
-              onChangeText={setPickup}
-              onClear={() => setPickup("")}
+              value={pickupInfo}
+              onChangeText={(e) => {
+                setPickup(e);
+                setPickupInfo(e);
+                fetchPlacePredictions(e, true);
+              }}
+              onClear={() => setPickupInfo("")}
             />
-
+            {pickup.length > 3 ? (
+              <View className="absolute left-0 right-0 top-full z-10 bg-white border dark:bg-zinc-800  h-64 mt-2 rounded-md">
+                <FlatList
+                  data={sourcePredictions}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPickupInfo(item.description);
+                        setPickup("");
+                        setOpenPickupModal(false);
+                      }}
+                      className="px-4 py-4 border-b"
+                    >
+                      <Text className="dark:text-white">
+                        {item.description}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  keyExtractor={(item) => item.place_id}
+                />
+              </View>
+            ) : (
+              <View></View>
+            )}
+          </View>
+          <View className="space-y-4 gap-6 my-2">
             {/* Drop Input */}
             <DestinationInput
               type="Drop"
@@ -140,7 +208,9 @@ export default function PublishScreen() {
           <TouchableOpacity
             activeOpacity={0.7}
             disabled={!isSaveEnabled}
-            onPress={() => console.log("Saving Trip:", { pickup, drop })}
+            onPress={() => {
+              router.push("/publish_pages/intermediate");
+            }}
             className={`rounded-2xl px-6 py-5 flex-row items-center border shadow-2xl ${
               isSaveEnabled
                 ? "bg-emerald-900/90 border-emerald-800 backdrop-blur-2xl"

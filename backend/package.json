@@ -12,6 +12,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@react-native-community/datetimepicker": "^8.5.1",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -19,6 +20,7 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.0.1",
+    "react-native-modal-datetime-picker": "^18.0.0",
     "twilio": "^5.10.7"
   },
   "devDependencies": {

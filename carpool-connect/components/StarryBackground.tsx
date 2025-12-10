@@ -1,38 +1,78 @@
-// import React, { useEffect, useState } from "react";
-// import { View, StyleSheet, Dimensions, Animated } from "react-native";
+// import React, { useEffect, useMemo, useRef, useState } from "react";
+// import {
+//   View,
+//   StyleSheet,
+//   Dimensions,
+//   Animated,
+//   Easing,
+//   Platform,
+// } from "react-native";
 // import { LinearGradient } from "expo-linear-gradient";
 
 // const { width, height } = Dimensions.get("window");
 
+// /* --------------------------------------------------------------
+//    Helpers – generate the static star field and the shooting‑star
+//    -------------------------------------------------------------- */
 // const generateStars = (count = 70) =>
 //   Array.from({ length: count }).map(() => ({
 //     left: Math.random() * width,
 //     top: Math.random() * height,
-//     size: Math.random() * 1.8 + 1,
+//     size: Math.random() * 1.2 + 0.8, // a bit smaller than before
 //   }));
 
 // const generateShootingStar = () => ({
 //   left: Math.random() * width,
-//   top: Math.random() * height * 0.5,
+//   top: Math.random() * height * 0.4, // keep it in the upper half
 // });
 
+// /* --------------------------------------------------------------
+//    StarryNight component
+//    -------------------------------------------------------------- */
 // export default function StarryNight({
 //   children,
 // }: {
 //   children: React.ReactNode;
 // }) {
-//   const stars = generateStars();
-//   const [shootingStar, setShootingStar] = useState(generateShootingStar());
-//   const shootingAnim = new Animated.Value(0);
+//   /* ---- Static stars – memoised so we only create them once ---- */
+//   const stars = useMemo(() => generateStars(70), []);
 
+//   /* ---- Shooting star state & animation ----------------------- */
+//   const [shootingStar, setShootingStar] = useState(generateShootingStar());
+//   const shootingAnim = useRef(new Animated.Value(0)).current;
+
+//   /* ---- Shared twinkle animation for *all* stars -------------- */
+//   const twinkleAnim = useRef(new Animated.Value(0)).current;
+//   useEffect(() => {
+//     Animated.loop(
+//       Animated.sequence([
+//         Animated.timing(twinkleAnim, {
+//           toValue: 1,
+//           duration: 1800,
+//           easing: Easing.inOut(Easing.quad),
+//           useNativeDriver: true,
+//         }),
+//         Animated.timing(twinkleAnim, {
+//           toValue: 0,
+//           duration: 1800,
+//           easing: Easing.inOut(Easing.quad),
+//           useNativeDriver: true,
+//         }),
+//       ])
+//     ).start();
+//   }, [twinkleAnim]);
+
+//   /* ---- Shooting‑star interval -------------------------------- */
 //   useEffect(() => {
 //     const interval = setInterval(
 //       () => {
 //         shootingAnim.setValue(0);
 //         setShootingStar(generateShootingStar());
+
 //         Animated.timing(shootingAnim, {
 //           toValue: 1,
 //           duration: 1200,
+//           easing: Easing.out(Easing.quad),
 //           useNativeDriver: true,
 //         }).start();
 //       },
@@ -40,260 +80,368 @@
 //     );
 
 //     return () => clearInterval(interval);
-//   }, []);
+//   }, [shootingAnim]);
 
+//   /* --------------------------------------------------------------
+//      Render
+//      -------------------------------------------------------------- */
 //   return (
-//     <View style={{ flex: 1 }}>
-//       {/* Main gradient sky */}
+//     <View style={styles.container}>
+//       {/* 1️⃣  Dark night sky gradient */}
 //       <LinearGradient
-//         colors={["#050414", "#090726", "#100A40", "#0A062E"]}
+//         colors={["#03010A", "#0A0435", "#0D0750", "#06031C"]}
 //         style={StyleSheet.absoluteFill}
 //       />
 
-//       {/* Nebula soft glow */}
+//       {/* 2️⃣  Very dim nebula – blurred for a soft glow */}
 //       <View
-//         style={{
-//           backgroundColor: "#6b3cff40",
-//           width: 400,
-//           height: 400,
-//           borderRadius: 200,
-//           position: "absolute",
-//           top: height * 0.25,
-//           left: -120,
-//           filter: "blur(50px)",
-//         }}
+//         style={[
+//           styles.nebula,
+//           {
+//             top: height * 0.28,
+//             left: -120,
+//           },
+//         ]}
 //       />
 
-//       {/* Stars */}
-//       {stars.map((star, index) => {
-//         const opacity = new Animated.Value(Math.random());
-//         Animated.loop(
-//           Animated.sequence([
-//             Animated.timing(opacity, {
-//               toValue: 1,
-//               duration: 1500,
-//               useNativeDriver: true,
-//             }),
-//             Animated.timing(opacity, {
-//               toValue: 0.3,
-//               duration: 1500,
-//               useNativeDriver: true,
-//             }),
-//           ])
-//         ).start();
+//       {/* 3️⃣  Stars – each gets its own position/size but shares the twinkle animation */}
+//       {stars.map((star, i) => {
+//         // Opacity varies between 0.15 and 0.5, driven by the shared animation.
+//         const opacity = twinkleAnim.interpolate({
+//           inputRange: [0, 0.5, 1],
+//           outputRange: [
+//             Math.random() * 0.15 + 0.15,
+//             Math.random() * 0.35 + 0.35,
+//             Math.random() * 0.15 + 0.15,
+//           ],
+//         });
 
 //         return (
 //           <Animated.View
-//             key={index}
-//             style={{
-//               position: "absolute",
-//               width: star.size,
-//               height: star.size,
-//               borderRadius: star.size / 2,
-//               backgroundColor: "white",
-//               left: star.left,
-//               top: star.top,
-//               opacity: opacity,
-//             }}
+//             key={i}
+//             style={[
+//               styles.star,
+//               {
+//                 left: star.left,
+//                 top: star.top,
+//                 width: star.size,
+//                 height: star.size,
+//                 borderRadius: star.size / 2,
+//                 opacity,
+//               },
+//             ]}
 //           />
 //         );
 //       })}
 
-//       {/* Shooting star */}
+//       {/* 4️⃣  Shooting star – short white streak with a fading tail */}
 //       <Animated.View
-//         style={{
-//           position: "absolute",
-//           width: 120,
-//           height: 2,
-//           borderRadius: 2,
-//           backgroundColor: "#ffffff",
-//           shadowColor: "#ffffff",
-//           shadowOpacity: 1,
-//           shadowRadius: 8,
-//           left: shootingStar.left,
-//           top: shootingStar.top,
-//           transform: [
-//             {
-//               translateX: shootingAnim.interpolate({
-//                 inputRange: [0, 1],
-//                 outputRange: [0, 350],
-//               }),
-//             },
-//             {
-//               translateY: shootingAnim.interpolate({
-//                 inputRange: [0, 1],
-//                 outputRange: [0, 120],
-//               }),
-//             },
-//           ],
-//           opacity: shootingAnim,
-//         }}
-//       />
+//         style={[
+//           styles.shootingStar,
+//           {
+//             left: shootingStar.left,
+//             top: shootingStar.top,
+//             opacity: shootingAnim.interpolate({
+//               inputRange: [0, 0.3, 1],
+//               outputRange: [0, 0.3, 0],
+//             }),
+//             transform: [
+//               {
+//                 translateX: shootingAnim.interpolate({
+//                   inputRange: [0, 1],
+//                   outputRange: [0, 350],
+//                 }),
+//               },
+//               {
+//                 translateY: shootingAnim.interpolate({
+//                   inputRange: [0, 1],
+//                   outputRange: [0, 120],
+//                 }),
+//               },
+//             ],
+//           },
+//         ]}
+//       >
+//         {/* Tail – a linear gradient that fades out */}
+//         <LinearGradient
+//           colors={["rgba(255,255,255,0.8)", "rgba(255,255,255,0)"]}
+//           start={{ x: 0, y: 0.5 }}
+//           end={{ x: 1, y: 0.5 }}
+//           style={StyleSheet.absoluteFill}
+//         />
+//       </Animated.View>
 
-//       {/* Children */}
-//       <View style={{ flex: 1, padding: 20 }}>{children}</View>
+//       {/* 5️⃣  Content passed by the user */}
+//       <View style={styles.childrenContainer}>{children}</View>
 //     </View>
 //   );
 // }
 
-import React, { useEffect, useState } from "react";
-import { View, StyleSheet, Dimensions, Animated } from "react-native";
+// /* --------------------------------------------------------------
+//    Styles – kept separate for readability
+//    -------------------------------------------------------------- */
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     backgroundColor: "#000", // fallback for devices that don’t render the gradient instantly
+//   },
+
+//   nebula: {
+//     position: "absolute",
+//     width: 420,
+//     height: 420,
+//     borderRadius: 210,
+//     backgroundColor: "#2a004f80", // deep violet with low opacity
+//     // `blurRadius` works on iOS and Android (>= 21). For web we keep the original CSS filter.
+//     ...Platform.select({
+//       ios: { shadowColor: "#2a004f", shadowOpacity: 1, shadowRadius: 100 },
+//       android: { elevation: 30 },
+//     }),
+//   },
+
+//   star: {
+//     position: "absolute",
+//     backgroundColor: "#ffffff",
+//   },
+
+//   shootingStar: {
+//     position: "absolute",
+//     width: 140,
+//     height: 2,
+//     borderRadius: 2,
+//     backgroundColor: "rgba(255,255,255,0.6)",
+//     // Slight glow
+//     shadowColor: "#fff",
+//     shadowOffset: { width: 0, height: 0 },
+//     shadowOpacity: 0.8,
+//     shadowRadius: 6,
+//   },
+
+//   childrenContainer: {
+//     flex: 1,
+//     padding: 20,
+//   },
+// });
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  Animated,
+  Easing,
+  Platform,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 const { width, height } = Dimensions.get("window");
 
-// More stars, more variance
-const generateStars = (count = 90) =>
+/* --------------------------------------------------------------
+   Helpers – generate the static star field and the shooting‑star
+   -------------------------------------------------------------- */
+const generateStars = (count = 70) =>
   Array.from({ length: count }).map(() => ({
     left: Math.random() * width,
     top: Math.random() * height,
-    size: Math.random() * 2.2 + 0.7,
-    glow: Math.random() > 0.7, // some stars glow softly
+    size: Math.random() * 1.2 + 0.8, // a bit smaller than before
   }));
 
 const generateShootingStar = () => ({
-  left: Math.random() * width * 0.7,
-  top: Math.random() * height * 0.4,
+  left: Math.random() * width,
+  top: Math.random() * height * 0.4, // keep it in the upper half
 });
 
+/* --------------------------------------------------------------
+   StarryNight component
+   -------------------------------------------------------------- */
 export default function StarryNight({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const stars = generateStars();
+  /* ---- Static stars – memoised so we only create them once ---- */
+  const stars = useMemo(() => generateStars(70), []);
+
+  /* ---- Shooting star state & animation ----------------------- */
   const [shootingStar, setShootingStar] = useState(generateShootingStar());
-  const shootingAnim = new Animated.Value(0);
+  const shootingAnim = useRef(new Animated.Value(0)).current;
 
+  /* ---- Shared twinkle animation for *all* stars -------------- */
+  const twinkleAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const runShootingStar = () => {
-      shootingAnim.setValue(0);
-      setShootingStar(generateShootingStar());
-      Animated.timing(shootingAnim, {
-        toValue: 1,
-        duration: 1400,
-        useNativeDriver: true,
-      }).start();
-    };
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(twinkleAnim, {
+          toValue: 1,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(twinkleAnim, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [twinkleAnim]);
 
-    const randomDelay = () => 4000 + Math.random() * 5000;
-    const interval = setInterval(runShootingStar, randomDelay());
+  /* ---- Shooting‑star interval -------------------------------- */
+  useEffect(() => {
+    const interval = setInterval(
+      () => {
+        shootingAnim.setValue(0);
+        setShootingStar(generateShootingStar());
+
+        Animated.timing(shootingAnim, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }).start();
+      },
+      5000 + Math.random() * 4000
+    );
+
     return () => clearInterval(interval);
-  }, []);
+  }, [shootingAnim]);
 
+  /* --------------------------------------------------------------
+     Render
+     -------------------------------------------------------------- */
   return (
-    <View style={{ flex: 1 }}>
-      {/* Deep cosmic gradient */}
+    <View style={styles.container}>
+      {/* 1️⃣  Dark‑blue night sky gradient */}
       <LinearGradient
-        colors={["#02010D", "#04021A", "#060326", "#080638"]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+        colors={["#02020F", "#0A0C35", "#111754", "#06031C"]} // <-- dark‑blue palette
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Moving Soft Nebula Glow */}
-      <Animated.View
-        style={{
-          position: "absolute",
-          width: 500,
-          height: 500,
-          backgroundColor: "#7F5BFF22",
-          borderRadius: 300,
-          top: height * 0.2,
-          left: -150,
-          opacity: 0.6,
-        }}
+      {/* 2️⃣  Very dim blue nebula – blurred for a soft glow */}
+      <View
+        style={[
+          styles.nebula,
+          {
+            top: height * 0.28,
+            left: -120,
+          },
+        ]}
       />
 
-      {/* STARS */}
-      {stars.map((star, index) => {
-        const opacity = new Animated.Value(Math.random() * 0.8 + 0.3);
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(opacity, {
-              toValue: 1,
-              duration: 2000 + Math.random() * 2000,
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacity, {
-              toValue: 0.3,
-              duration: 1800 + Math.random() * 2000,
-              useNativeDriver: true,
-            }),
-          ])
-        ).start();
+      {/* 3️⃣  Stars – each gets its own position/size but shares the twinkle animation */}
+      {stars.map((star, i) => {
+        const opacity = twinkleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [
+            Math.random() * 0.15 + 0.15,
+            Math.random() * 0.35 + 0.35,
+            Math.random() * 0.15 + 0.15,
+          ],
+        });
 
         return (
-          <View key={index}>
-            {/* soft glow behind some stars */}
-            {star.glow && (
-              <Animated.View
-                style={{
-                  position: "absolute",
-                  width: star.size * 6,
-                  height: star.size * 6,
-                  backgroundColor: "#ffffff20",
-                  borderRadius: 20,
-                  left: star.left - star.size * 2.5,
-                  top: star.top - star.size * 2.5,
-                }}
-              />
-            )}
-
-            {/* main star */}
-            <Animated.View
-              style={{
-                position: "absolute",
+          <Animated.View
+            key={i}
+            style={[
+              styles.star,
+              {
+                left: star.left,
+                top: star.top,
                 width: star.size,
                 height: star.size,
                 borderRadius: star.size / 2,
-                backgroundColor: "white",
-                left: star.left,
-                top: star.top,
-                opacity: opacity,
-              }}
-            />
-          </View>
+                opacity,
+              },
+            ]}
+          />
         );
       })}
 
-      {/* SHOOTING STAR */}
+      {/* 4️⃣  Shooting star – short white streak with a fading tail */}
       <Animated.View
-        style={{
-          position: "absolute",
-          width: 160,
-          height: 3,
-          borderRadius: 3,
-          backgroundColor: "#ffffff",
-          left: shootingStar.left,
-          top: shootingStar.top,
-          opacity: shootingAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 1],
-          }),
-          transform: [
-            {
-              translateX: shootingAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 450],
-              }),
-            },
-            {
-              translateY: shootingAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 160],
-              }),
-            },
-            { rotateZ: "-18deg" },
-          ],
-          shadowColor: "#fff",
-          shadowOpacity: 1,
-          shadowRadius: 12,
-        }}
-      />
+        style={[
+          styles.shootingStar,
+          {
+            left: shootingStar.left,
+            top: shootingStar.top,
+            opacity: shootingAnim.interpolate({
+              inputRange: [0, 0.3, 1],
+              outputRange: [0, 0.3, 0],
+            }),
+            transform: [
+              {
+                translateX: shootingAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 350],
+                }),
+              },
+              {
+                translateY: shootingAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 120],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        {/* Tail – linear gradient that fades out */}
+        <LinearGradient
+          colors={["rgba(255,255,255,0.8)", "rgba(255,255,255,0)"]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
 
-      {/* Children */}
-      <View style={{ flex: 1, padding: 20 }}>{children}</View>
+      {/* 5️⃣  Content passed by the user */}
+      <View style={styles.childrenContainer}>{children}</View>
     </View>
   );
 }
+
+/* --------------------------------------------------------------
+   Styles – unchanged except for colour tweaks
+   -------------------------------------------------------------- */
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#000", // fallback while gradient loads
+  },
+
+  nebula: {
+    position: "absolute",
+    width: 420,
+    height: 420,
+    borderRadius: 210,
+    backgroundColor: "#00124d80", // deep midnight‑blue with low opacity
+    // `blurRadius` works on iOS/Android. For web we use a shadow trick.
+    ...Platform.select({
+      ios: { shadowColor: "#00124d", shadowOpacity: 1, shadowRadius: 100 },
+      android: { elevation: 30 },
+    }),
+  },
+
+  star: {
+    position: "absolute",
+    backgroundColor: "#ffffff", // keep white for maximum contrast
+  },
+
+  shootingStar: {
+    position: "absolute",
+    width: 140,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.6)",
+    shadowColor: "#fff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+  },
+
+  childrenContainer: {
+    flex: 1,
+    padding: 20,
+  },
+});

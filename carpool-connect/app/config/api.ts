@@ -1,10 +1,8 @@
 import Constants from "expo-constants";
 const URL = Constants.expoConfig?.extra?.API_URL;
 
-console.log(URL);
-
 export async function getEmail(email: string) {
-  console.log(URL);
+  console.log(email);
   const response = await fetch(`${URL}/users/email`, {
     method: "POST",
     headers: {
