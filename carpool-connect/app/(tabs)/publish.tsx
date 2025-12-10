@@ -105,8 +105,8 @@ export default function PublishScreen() {
           </View>
 
           {/* ----- Destination Inputs (using the new component) ----- */}
-          {/* Increased space between components to space-y-10 */}
-          <View className="space-y-20">
+          {/* COMBINED both inputs into a single View with space-y-4 */}
+          <View className="space-y-4 gap-6">
             {/* Pickup Input */}
             <DestinationInput
               type="Pickup"
@@ -114,9 +114,7 @@ export default function PublishScreen() {
               onChangeText={setPickup}
               onClear={() => setPickup("")}
             />
-          </View>
 
-          <View className="space-y-13">
             {/* Drop Input */}
             <DestinationInput
               type="Drop"
@@ -136,7 +134,7 @@ export default function PublishScreen() {
         className="absolute left-0 right-0 px-6"
         style={{ bottom: bottom + 20 }}
       >
-        <View className="space-y-3">
+        <View className="space-y-3 gap-4">
           {/* Save / Confirm (Disabled if not ready) */}
           <TouchableOpacity
             activeOpacity={0.7}
@@ -154,22 +152,13 @@ export default function PublishScreen() {
               color={isSaveEnabled ? "#6ee7b7" : "#a1a1aa"}
             />
             <Text
-              className={`font-semibold ml-4 flex-1 text-base ${isSaveEnabled ? "text-white" : "text-zinc-400"}`}
+              className={`font-semibold ml-4 flex-1 text-base ${
+                isSaveEnabled ? "text-white" : "text-zinc-400"
+              }`}
             >
               Save Trip
             </Text>
             <Feather name="chevron-right" size={24} color="#64748b" />
-          </TouchableOpacity>
-
-          {/* Cancel */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            className="bg-red-900/30 backdrop-blur-2xl rounded-2xl px-6 py-5 flex-row items-center border border-red-800/50 shadow-2xl"
-          >
-            <MaterialIcons name="cancel" size={24} color="#fca5a5" />
-            <Text className="text-red-400 font-semibold ml-4 flex-1 text-base">
-              Cancel
-            </Text>
           </TouchableOpacity>
         </View>
       </View>

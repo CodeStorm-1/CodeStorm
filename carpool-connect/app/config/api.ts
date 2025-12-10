@@ -1,6 +1,11 @@
-let URL = "http://10.130.91.206:3000/api";
+import Constants from "expo-constants";
+
+const URL = Constants.expoConfig?.extra?.API_URL;
+
+console.log(URL);
 
 export async function getEmail(email: string) {
+  console.log(URL);
   const response = await fetch(`${URL}/users/email`, {
     method: "POST",
     headers: {
@@ -100,13 +105,6 @@ export async function login(email: string, password: string) {
   });
 
   if (!response.ok) {
-    // Let’s see what the server actually sent
-    const text = await response.text();
-    console.error(
-      "Server returned error:",
-      response.status,
-      text.slice(0, 500)
-    );
     throw new Error(`Server error ${response.status}: ${response.statusText}`);
   }
 
@@ -114,8 +112,6 @@ export async function login(email: string, password: string) {
   try {
     data = await response.json();
   } catch (e) {
-    const text = await response.text();
-    console.error("Not JSON! Server sent:", text.slice(0, 500));
     throw new Error("Server did not return JSON (probably HTML error page)");
   }
 

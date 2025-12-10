@@ -12,6 +12,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.swayam-1104.carpoolconnect"
     },
+    "extra": {
+      "API_URL": "http://10.130.91.206:3000/api"
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
