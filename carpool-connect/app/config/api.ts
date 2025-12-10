@@ -1,5 +1,7 @@
+let URL = "http://10.130.91.206:3000/api";
+
 export async function getEmail(email: string) {
-  const response = await fetch("http://10.130.91.206:3000/api/users/email", {
+  const response = await fetch(`${URL}/users/email`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -20,7 +22,7 @@ export async function getEmail(email: string) {
 }
 
 export async function getPhone(phone: string) {
-  const response = await fetch("http://10.130.91.206:3000/api/users/phone", {
+  const response = await fetch(`${URL}/users/phone`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -41,7 +43,7 @@ export async function getPhone(phone: string) {
 }
 
 export async function getOTP(phone: string) {
-  const response = await fetch("http://10.130.91.206:3000/api/auth/sent-otp", {
+  const response = await fetch(`${URL}/auth/sent-otp`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -63,40 +65,15 @@ export async function getOTP(phone: string) {
 
 export async function verifyOTP(phone: string, code: string) {
   console.log(phone, code);
-  const response = await fetch(
-    "http://10.130.91.206:3000/api/auth/verify-otp",
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        phone: `+91${phone}`,
-        code: code,
-      }),
-    }
-  );
-
-  if (!response) {
-    throw new Error("Failed to fetch data");
-  }
-
-  const data = await response.json();
-
-  return data;
-}
-
-export async function login(email: string, password: string) {
-  const response = await fetch("http://10.130.91.206:3000/api/auth/login", {
+  const response = await fetch(`${URL}/auth/verify-otp`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      email: email,
-      password: password,
+      phone: `+91${phone}`,
+      code: code,
     }),
   });
 
@@ -109,13 +86,49 @@ export async function login(email: string, password: string) {
   return data;
 }
 
+export async function login(email: string, password: string) {
+  const response = await fetch(`${URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: email,
+      password: password,
+    }),
+  });
+
+  if (!response.ok) {
+    // Let’s see what the server actually sent
+    const text = await response.text();
+    console.error(
+      "Server returned error:",
+      response.status,
+      text.slice(0, 500)
+    );
+    throw new Error(`Server error ${response.status}: ${response.statusText}`);
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
+    const text = await response.text();
+    console.error("Not JSON! Server sent:", text.slice(0, 500));
+    throw new Error("Server did not return JSON (probably HTML error page)");
+  }
+
+  return data;
+}
+
 export async function signup(
   name: string,
   phone: string,
   email: string,
   password: string
 ) {
-  const response = await fetch("http://10.130.91.206:3000/api/auth/signup", {
+  const response = await fetch(`${URL}/auth/signup`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -129,11 +142,25 @@ export async function signup(
     }),
   });
 
-  if (!response) {
-    throw new Error("Failed to fetch data");
+  if (!response.ok) {
+    // Let’s see what the server actually sent
+    const text = await response.text();
+    console.error(
+      "Server returned error:",
+      response.status,
+      text.slice(0, 500)
+    );
+    throw new Error(`Server error ${response.status}: ${response.statusText}`);
   }
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
+    const text = await response.text();
+    console.error("Not JSON! Server sent:", text.slice(0, 500));
+    throw new Error("Server did not return JSON (probably HTML error page)");
+  }
 
   return data;
 }

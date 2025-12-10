@@ -3,35 +3,30 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-type EmailLoginState = {
+type UserState = {
   email: string | null;
-  password: string | null;
+  phone: string | null;
+  name: string | null;
 
   /** Update any field by name */
-  setField: <K extends keyof EmailLoginState>(
-    key: K,
-    value: EmailLoginState[K]
-  ) => void;
-
-  clear: () => void;
+  setField: <K extends keyof UserState>(key: K, value: UserState[K]) => void;
 };
 
-export const useEmailLoginStore = create<EmailLoginState>()(
+export const useUserStore = create<UserState>()(
   persist(
-    (set): EmailLoginState => ({
+    (set): UserState => ({
       email: null,
-      password: null,
+      phone: null,
+      name: null,
 
       setField: (key, value) =>
         set((state) => ({
           ...state,
           [key]: value,
         })),
-
-      clear: () => set({ email: null, password: null }),
     }),
     {
-      name: "email-login-storage",
+      name: "user-storage",
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

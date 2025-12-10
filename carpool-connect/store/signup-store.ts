@@ -14,6 +14,8 @@ type SignupState = {
     key: K,
     value: SignupState[K]
   ) => void;
+
+  clear: () => void;
 };
 
 export const useSignupStore = create<SignupState>()(
@@ -30,6 +32,15 @@ export const useSignupStore = create<SignupState>()(
           ...state,
           [key]: value,
         })),
+
+      clear: () =>
+        set({
+          email: null,
+          password: null,
+          name: null,
+          phone: null,
+          otp: null,
+        }),
     }),
     {
       name: "signup-storage",

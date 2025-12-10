@@ -4,12 +4,13 @@ import { MaterialIcons, Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "@/store/auth-store";
+import { useUserStore } from "@/store/user-store";
 
 export default function Profile() {
   const { top, bottom } = useSafeAreaInsets();
-  const username = useSignupStore((state) => state.name);
-  const email = useSignupStore((state) => state.email);
-  const phone = useSignupStore((state) => state.phone);
+  const username = useUserStore((state) => state.name);
+  const email = useUserStore((state) => state.email);
+  const phone = useUserStore((state) => state.phone);
   const clear = useAuthStore((state) => state.clear);
 
   const profileImage = "https://picsum.photos/200";

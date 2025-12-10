@@ -15,6 +15,8 @@ import { useSignupStore } from "@/store/signup-store";
 import { signup } from "@/app/config/api";
 import Toast from "react-native-toast-message";
 import { useAuthStore } from "@/store/auth-store";
+import { useEmailLoginStore } from "@/store/email-login-store";
+import { useUserStore } from "@/store/user-store";
 
 export default function NamePage() {
   const [name, setName] = useState("");
@@ -22,6 +24,9 @@ export default function NamePage() {
   const email = useSignupStore((state) => state.email);
   const password = useSignupStore((state) => state.password);
   const phone = useSignupStore((state) => state.phone);
+  const clear = useSignupStore((state) => state.clear);
+  const clearlogin = useEmailLoginStore((state) => state.clear);
+  const setFieldUser = useUserStore((state) => state.setField);
   const setToken = useAuthStore((state) => state.setToken);
 
   const handleContinue = async () => {
@@ -59,7 +64,12 @@ export default function NamePage() {
       }
 
       setToken(resp.token);
+      setFieldUser("email", email);
+      setFieldUser("name", name);
+      setFieldUser("phone", phone);
       setField("name", name);
+      clear();
+      clearlogin();
       router.push("/(tabs)/profile"); // or next step
     }
   };

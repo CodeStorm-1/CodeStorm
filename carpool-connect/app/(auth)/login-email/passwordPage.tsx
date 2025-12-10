@@ -16,12 +16,15 @@ import { useEmailLoginStore } from "@/store/email-login-store";
 import { login } from "@/app/config/api";
 import { useAuthStore } from "@/store/auth-store";
 import { useSignupStore } from "@/store/signup-store";
+import { useUserStore } from "@/store/user-store";
 
 export default function SignInPasswordPage() {
   // Retrieve the email passed from the previous screen
   const userEmail = useEmailLoginStore((s) => s.email);
   const setToken = useAuthStore((state) => state.setToken);
-  const setField = useSignupStore((s) => s.setField);
+  const setField = useUserStore((state) => state.setField);
+  const clear = useSignupStore((state) => state.clear);
+  const clearlogin = useEmailLoginStore((state) => state.clear);
 
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -51,9 +54,12 @@ export default function SignInPasswordPage() {
     }
 
     setToken(resp.token);
-    setField("email", resp.email);
-    setField("name", resp.name);
-    setField("phone", resp.phone);
+    setField("email", resp.user.email);
+    setField("name", resp.user.name);
+    setField("phone", resp.user.phone);
+
+    clear();
+    clearlogin();
 
     setLoading(true);
 
