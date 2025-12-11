@@ -5,15 +5,18 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  StyleSheet,
   Alert,
   TextInput,
   Modal,
   FlatList,
 } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
-import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
+import { useLocationStore } from "@/store/location-store";
+import { useDriverRouteStore } from "@/store/driverRoute-store";
+import { router } from "expo-router";
+import { set } from "date-fns";
+import { useUserStore } from "@/store/user-store";
 
 const GOOGLE_API_KEY = "AIzaSyBvjcPaK4ZXgLeLjKNZN6i2NamuiHuhDdU"; // Replace with your key
 
@@ -39,12 +42,6 @@ interface Route {
 }
 
 export default function PublishRide() {
-  const [source, setSource] = useState<
-    (LocationCoords & { address: string }) | null
-  >(null);
-  const [destination, setDestination] = useState<
-    (LocationCoords & { address: string }) | null
-  >(null);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,62 +56,16 @@ export default function PublishRide() {
   const [showSourceModal, setShowSourceModal] = useState(false);
   const [showDestModal, setShowDestModal] = useState(false);
 
-  // Fetch place predictions from Google Places Autocomplete
-  const fetchPlacePredictions = async (input: string, isSource: boolean) => {
-    if (input.length < 3) return;
+  const source = useLocationStore((state) => state.pickupInfo);
+  const destination = useLocationStore((state) => state.destInfo);
 
-    try {
-      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-        input
-      )}&key=${GOOGLE_API_KEY}&language=en&components=country:in`;
+  const setState = useLocationStore((state) => state.setState);
+  const id = useUserStore((state) => state.id);
+  const name = useUserStore((state) => state.name);
+  const phone = useUserStore((state) => state.phone);
 
-      const response = await fetch(url);
-      const data = await response.json();
-
-      const predictions = data.predictions || [];
-      if (isSource) {
-        setSourcePredictions(predictions);
-      } else {
-        setDestPredictions(predictions);
-      }
-    } catch (error) {
-      console.error("Error fetching predictions:", error);
-    }
-  };
-
-  // Get place details (lat/lng) from place_id
-  const getPlaceDetails = async (placeId: string, isSource: boolean) => {
-    try {
-      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${GOOGLE_API_KEY}&fields=geometry,formatted_address,name`;
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.result) {
-        const result = data.result;
-        const coords = {
-          latitude: result.geometry.location.lat,
-          longitude: result.geometry.location.lng,
-          address: result.formatted_address,
-        };
-
-        if (isSource) {
-          setSource(coords);
-          setSourceInput(result.formatted_address);
-          setSourcePredictions([]);
-          setShowSourceModal(false);
-        } else {
-          setDestination(coords);
-          setDestInput(result.formatted_address);
-          setDestPredictions([]);
-          setShowDestModal(false);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching place details:", error);
-      Alert.alert("Error", "Failed to fetch location details");
-    }
-  };
+  const setUserId = useDriverRouteStore((state) => state.setUserId);
+  const setPoints = useDriverRouteStore((state) => state.setPoints);
 
   // Fetch routes between source and destination
   const fetchRoutes = async () => {
@@ -211,10 +162,10 @@ export default function PublishRide() {
   const getMapRegion = () => {
     if (!source || !destination) return null;
 
-    const minLat = Math.min(source.latitude, destination.latitude);
-    const maxLat = Math.max(source.latitude, destination.latitude);
-    const minLng = Math.min(source.longitude, destination.longitude);
-    const maxLng = Math.max(source.longitude, destination.longitude);
+    const minLat = Math.min(source.latitude!, destination.latitude!);
+    const maxLat = Math.max(source.latitude!, destination.latitude!);
+    const minLng = Math.min(source.longitude!, destination.longitude!);
+    const maxLng = Math.max(source.longitude!, destination.longitude!);
 
     return {
       latitude: (minLat + maxLat) / 2,
@@ -226,16 +177,40 @@ export default function PublishRide() {
 
   const mapRegion = getMapRegion();
 
+  const handleContinue = () => {
+    if (selectedRoute) {
+      setState({
+        encodedPolyline: selectedRoute.polyline,
+      });
+      setState({
+        id: id,
+        name: name,
+        phone: phone,
+      });
+      setUserId(id!);
+      setPoints(selectedRoute.points);
+      router.push("/publish_pages/datetime");
+    }
+  };
+
+  useEffect(() => {
+    fetchRoutes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, destination]);
+
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-[#f5f5f5]">
       {/* Map View */}
       {mapRegion ? (
-        <MapView style={styles.map} initialRegion={mapRegion}>
+        <MapView
+          style={{ height: "55%", width: "100%" }}
+          initialRegion={mapRegion}
+        >
           {source && (
             <Marker
               coordinate={{
-                latitude: source.latitude,
-                longitude: source.longitude,
+                latitude: source.latitude!,
+                longitude: source.longitude!,
               }}
               title="Pickup"
               pinColor="green"
@@ -244,8 +219,8 @@ export default function PublishRide() {
           {destination && (
             <Marker
               coordinate={{
-                latitude: destination.latitude,
-                longitude: destination.longitude,
+                latitude: destination.latitude!,
+                longitude: destination.longitude!,
               }}
               title="Dropoff"
               pinColor="red"
@@ -260,8 +235,8 @@ export default function PublishRide() {
           )}
         </MapView>
       ) : (
-        <View style={styles.mapPlaceholder}>
-          <Text style={styles.mapPlaceholderText}>
+        <View className="h-[45%] justify-center items-center bg-[#e8e8e8]">
+          <Text className="text-sm text-[#666] text-center">
             Select source & destination to see map
           </Text>
         </View>
@@ -269,459 +244,191 @@ export default function PublishRide() {
 
       {/* Bottom Form */}
       <ScrollView
-        style={styles.formContainer}
+        className="flex-1 bg-zinc-900 px-4 pt-5"
         showsVerticalScrollIndicator={false}
       >
-        {/* Source Input */}
-        <View style={styles.section}>
-          <Text style={styles.label}>📍 Pickup Location</Text>
-          <TouchableOpacity
-            style={styles.inputButton}
-            onPress={() => setShowSourceModal(true)}
-          >
-            <Text style={styles.inputButtonText}>
-              {sourceInput || "Select pickup location"}
-            </Text>
-            <Ionicons name="chevron-down" size={20} color="#007AFF" />
-          </TouchableOpacity>
-          {source && <Text style={styles.selectedText}>{source.address}</Text>}
-        </View>
-
-        {/* Destination Input */}
-        <View style={styles.section}>
-          <Text style={styles.label}>🎯 Drop Location</Text>
-          <TouchableOpacity
-            style={styles.inputButton}
-            onPress={() => setShowDestModal(true)}
-          >
-            <Text style={styles.inputButtonText}>
-              {destInput || "Select drop location"}
-            </Text>
-            <Ionicons name="chevron-down" size={20} color="#007AFF" />
-          </TouchableOpacity>
-          {destination && (
-            <Text style={styles.selectedText}>{destination.address}</Text>
-          )}
-        </View>
-
-        {/* Find Routes Button */}
-        {source && destination && (
-          <TouchableOpacity
-            style={styles.findRoutesButton}
-            onPress={fetchRoutes}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.findRoutesButtonText}>🗺️ Find Routes</Text>
-            )}
-          </TouchableOpacity>
-        )}
-
         {/* Routes Display */}
         {routes.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.label}>
+          <View className="mb-4">
+            <Text className="text-base font-semibold text-gray-300 mb-2">
               Available Routes (Sorted by fastest)
             </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={styles.routesList}
+              className="mb-3"
             >
-              {routes.map((route, index) => (
-                <TouchableOpacity
-                  key={route.id}
-                  style={[
-                    styles.routeCard,
-                    selectedRoute?.id === route.id && styles.routeCardSelected,
-                  ]}
-                  onPress={() => setSelectedRoute(route)}
-                >
-                  <View style={styles.routeCardContent}>
-                    <Text style={styles.routeNumber}>Route {index + 1}</Text>
-                    <Text style={styles.routeTime}>{route.duration}</Text>
-                    <Text style={styles.routeDistance}>{route.distance}</Text>
-                  </View>
-                  {selectedRoute?.id === route.id && (
-                    <View style={styles.checkmark}>
-                      <Ionicons
-                        name="checkmark-circle-sharp"
-                        size={28}
-                        color="#34C759"
-                      />
+              {routes.map((route, index) => {
+                const isSelected = selectedRoute?.id === route.id;
+                return (
+                  <TouchableOpacity
+                    key={route.id}
+                    className={`min-w-[140px] mr-3 rounded-xl p-4 justify-center border-2 
+                      ${
+                        isSelected
+                          ? "bg-[#E3F2FD] dark:bg-[#1E3A5F] border-[#007AFF] dark:border-[#4DA3FF]"
+                          : "bg-[#F5F5F5] dark:bg-[#1A1A1A] border-[#E0E0E0] dark:border-[#333]"
+                      }
+                    `}
+                    onPress={() => setSelectedRoute(route)}
+                  >
+                    <View className="items-center">
+                      <Text className="text-xs text-gray-400 mb-2 font-medium">
+                        Route {index + 1}
+                      </Text>
+                      <Text className="text-lg font-extrabold text-white">
+                        {route.duration}
+                      </Text>
+                      <Text className="text-sm text-white mt-1">
+                        {route.distance}
+                      </Text>
                     </View>
-                  )}
-                </TouchableOpacity>
-              ))}
+                    {isSelected && (
+                      <View className="absolute top-1 right-1">
+                        <Ionicons
+                          name="checkmark-circle-sharp"
+                          size={28}
+                          color="#34C759"
+                        />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         )}
 
         {/* Selected Route Info */}
         {selectedRoute && (
-          <View style={styles.selectedRouteInfo}>
-            <Text style={styles.selectedRouteTitle}>✓ Route Selected</Text>
-            <View style={styles.routeInfoRow}>
+          <View
+            className="bg-zinc-800/5 border-zinc-500 rounded-xl p-4 mb-4"
+            style={{ borderLeftWidth: 3, borderLeftColor: "#34C759" }}
+          >
+            <Text className="text-base font-semibold text-[#2E7D32] mb-2">
+              ✓ Route Selected
+            </Text>
+            <View className="flex-row items-center mb-2">
               <Ionicons name="time" size={18} color="#007AFF" />
-              <Text style={styles.routeInfoText}>{selectedRoute.duration}</Text>
+              <Text className="text-sm text-[#1976D2] ml-2 font-medium">
+                {selectedRoute.duration}
+              </Text>
             </View>
-            <View style={styles.routeInfoRow}>
+            <View className="flex-row items-center">
               <Ionicons name="navigate" size={18} color="#007AFF" />
-              <Text style={styles.routeInfoText}>{selectedRoute.distance}</Text>
+              <Text className="text-sm text-[#1976D2] ml-2 font-medium">
+                {selectedRoute.distance}
+              </Text>
             </View>
           </View>
         )}
 
         {/* Continue Button */}
         {selectedRoute && (
-          <TouchableOpacity style={styles.continueButton}>
-            <Text style={styles.continueButtonText}>
-              Continue to Add Details
+          <TouchableOpacity
+            className="bg-[#34C759] py-3 rounded-xl items-center mb-6 shadow"
+            onPress={handleContinue}
+          >
+            <Text className="text-white text-base font-semibold">
+              Select Route
             </Text>
           </TouchableOpacity>
         )}
 
-        <View style={{ height: 30 }} />
+        <View className="h-8" />
       </ScrollView>
 
-      {/* Source Modal */}
-      <Modal visible={showSourceModal} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Pickup Location</Text>
+      {/* Modals for source/destination (kept structure; wire up where needed) */}
+      <Modal visible={showSourceModal} animationType="slide" transparent>
+        <View className="flex-1 bg-[rgba(0,0,0,0.5)] justify-end">
+          <View className="bg-white rounded-t-[20px] h-[75%] pt-4">
+            <View className="flex-row justify-between items-center px-4 pb-3 border-b border-[#EEE]">
+              <Text className="text-lg font-semibold text-[#333]">Select</Text>
               <TouchableOpacity onPress={() => setShowSourceModal(false)}>
-                <Ionicons name="close" size={24} color="#333" />
+                <Text className="text-[#007AFF]">Close</Text>
               </TouchableOpacity>
             </View>
 
             <TextInput
-              style={styles.searchInput}
-              placeholder="Search location..."
-              placeholderTextColor="#999"
               value={sourceInput}
-              onChangeText={(text) => {
-                setSourceInput(text);
-                fetchPlacePredictions(text, true);
-              }}
+              onChangeText={setSourceInput}
+              placeholder="Search for a place"
+              className="mx-4 my-3 border-2 border-[#E0E0E0] rounded-xl px-4 py-3 text-base text-[#333]"
             />
 
-            {sourcePredictions.length > 0 ? (
-              <FlatList
-                data={sourcePredictions}
-                keyExtractor={(item) => item.place_id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.predictionItem}
-                    onPress={() => getPlaceDetails(item.place_id, true)}
-                  >
-                    <Ionicons name="location" size={18} color="#007AFF" />
-                    <View style={styles.predictionText}>
-                      <Text style={styles.predictionMain}>
-                        {item.main_text}
-                      </Text>
-                      <Text style={styles.predictionSub}>
-                        {item.description}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-              />
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>
-                  Type to search locations
-                </Text>
-              </View>
-            )}
+            <FlatList
+              data={sourcePredictions}
+              keyExtractor={(item) => item.place_id}
+              renderItem={({ item }) => (
+                <TouchableOpacity className="flex-row items-start px-4 py-3 border-b border-[#F5F5F5]">
+                  <View className="ml-3 flex-1">
+                    <Text className="text-sm font-semibold text-[#333]">
+                      {item.main_text}
+                    </Text>
+                    <Text className="text-xs text-[#999] mt-1">
+                      {item.description}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={() => (
+                <View className="flex-1 justify-center items-center">
+                  <Text className="text-sm text-[#999]">No results</Text>
+                </View>
+              )}
+            />
           </View>
         </View>
       </Modal>
 
-      {/* Destination Modal */}
-      <Modal visible={showDestModal} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Drop Location</Text>
+      <Modal visible={showDestModal} animationType="slide" transparent>
+        <View className="flex-1 bg-[rgba(0,0,0,0.5)] justify-end">
+          <View className="bg-white rounded-t-[20px] h-[75%] pt-4">
+            <View className="flex-row justify-between items-center px-4 pb-3 border-b border-[#EEE]">
+              <Text className="text-lg font-semibold text-[#333]">Select</Text>
               <TouchableOpacity onPress={() => setShowDestModal(false)}>
-                <Ionicons name="close" size={24} color="#333" />
+                <Text className="text-[#007AFF]">Close</Text>
               </TouchableOpacity>
             </View>
 
             <TextInput
-              style={styles.searchInput}
-              placeholder="Search location..."
-              placeholderTextColor="#999"
               value={destInput}
-              onChangeText={(text) => {
-                setDestInput(text);
-                fetchPlacePredictions(text, false);
-              }}
+              onChangeText={setDestInput}
+              placeholder="Search for a place"
+              className="mx-4 my-3 border-2 border-[#E0E0E0] rounded-xl px-4 py-3 text-base text-[#333]"
             />
 
-            {destPredictions.length > 0 ? (
-              <FlatList
-                data={destPredictions}
-                keyExtractor={(item) => item.place_id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.predictionItem}
-                    onPress={() => getPlaceDetails(item.place_id, false)}
-                  >
-                    <Ionicons name="location" size={18} color="#007AFF" />
-                    <View style={styles.predictionText}>
-                      <Text style={styles.predictionMain}>
-                        {item.main_text}
-                      </Text>
-                      <Text style={styles.predictionSub}>
-                        {item.description}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-              />
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>
-                  Type to search locations
-                </Text>
-              </View>
-            )}
+            <FlatList
+              data={destPredictions}
+              keyExtractor={(item) => item.place_id}
+              renderItem={({ item }) => (
+                <TouchableOpacity className="flex-row items-start px-4 py-3 border-b border-[#F5F5F5]">
+                  <View className="ml-3 flex-1">
+                    <Text className="text-sm font-semibold text-[#333]">
+                      {item.main_text}
+                    </Text>
+                    <Text className="text-xs text-[#999] mt-1">
+                      {item.description}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={() => (
+                <View className="flex-1 justify-center items-center">
+                  <Text className="text-sm text-[#999]">No results</Text>
+                </View>
+              )}
+            />
           </View>
         </View>
       </Modal>
+
+      {/* Loading indicator */}
+      {loading && (
+        <View className="absolute inset-0 justify-center items-center">
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  map: {
-    height: "45%",
-  },
-  mapPlaceholder: {
-    height: "45%",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#e8e8e8",
-  },
-  mapPlaceholderText: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-  },
-  formContainer: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 16,
-    paddingTop: 20,
-  },
-  section: {
-    marginBottom: 18,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 10,
-  },
-  inputButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 2,
-    borderColor: "#E0E0E0",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: "#F9F9F9",
-  },
-  inputButtonText: {
-    fontSize: 14,
-    color: "#666",
-    flex: 1,
-  },
-  selectedText: {
-    fontSize: 12,
-    color: "#007AFF",
-    marginTop: 6,
-    fontWeight: "500",
-  },
-  findRoutesButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 20,
-    marginTop: 10,
-    shadowColor: "#007AFF",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  findRoutesButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  routesList: {
-    marginBottom: 12,
-  },
-  routeCard: {
-    backgroundColor: "#F5F5F5",
-    borderRadius: 12,
-    padding: 14,
-    marginRight: 12,
-    minWidth: 140,
-    borderWidth: 2,
-    borderColor: "#E0E0E0",
-    justifyContent: "center",
-  },
-  routeCardSelected: {
-    backgroundColor: "#E3F2FD",
-    borderColor: "#007AFF",
-  },
-  routeCardContent: {
-    alignItems: "center",
-  },
-  routeNumber: {
-    fontSize: 12,
-    color: "#999",
-    marginBottom: 8,
-    fontWeight: "500",
-  },
-  routeTime: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#333",
-  },
-  routeDistance: {
-    fontSize: 13,
-    color: "#666",
-    marginTop: 6,
-  },
-  checkmark: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-  },
-  selectedRouteInfo: {
-    backgroundColor: "#E8F5E9",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: "#34C759",
-  },
-  selectedRouteTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2E7D32",
-    marginBottom: 10,
-  },
-  routeInfoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  routeInfoText: {
-    fontSize: 14,
-    color: "#1976D2",
-    marginLeft: 10,
-    fontWeight: "500",
-  },
-  continueButton: {
-    backgroundColor: "#34C759",
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    shadowColor: "#34C759",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  continueButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  // Modal Styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    height: "75%",
-    paddingTop: 16,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEE",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-  },
-  searchInput: {
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderWidth: 2,
-    borderColor: "#E0E0E0",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: "#333",
-  },
-  predictionItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F5F5F5",
-  },
-  predictionText: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  predictionMain: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-  predictionSub: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 3,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: "#999",
-  },
-});

@@ -5,6 +5,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import rideRoutes from "./routes/rideRoutes.js";
 import cors from "cors";
 import connectDb from "./config/db.js";
 
@@ -23,6 +24,8 @@ const port = 3000;
 app.use("/api/auth", authRoutes);
 
 app.use("/api/users", userRoutes);
+
+app.use("/api/rides", rideRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");

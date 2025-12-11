@@ -1,27 +1,22 @@
 import mongoose from "mongoose";
 
-const DriverRoutePointSchema = new mongoose.Schema({
-  driverId: {
-    type: String,
-    required: true,
-    index: true,
-  },
+const DriverRouteSchema = new mongoose.Schema({
+  driverId: String,
 
-  routePoint: {
+  route: {
     type: {
       type: String,
-      enum: ["Point"],
-      default: "Point",
+      enum: ["LineString"],
+      default: "LineString",
     },
     coordinates: {
-      type: [Number], // [lng, lat]
+      type: [[Number]], // array -> [ [lng,lat], [lng,lat] ]
       required: true,
     },
   },
 });
 
-// Create 2dsphere index
-DriverRoutePointSchema.index({ routePoint: "2dsphere" });
+DriverRouteSchema.index({ route: "2dsphere" });
 
 export default mongoose.models.DriverRoutePoint ||
-  mongoose.model("DriverRoutePoint", DriverRoutePointSchema);
+  mongoose.model("DriverRoutePoint", DriverRouteSchema);

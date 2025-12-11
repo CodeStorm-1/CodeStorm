@@ -1,3 +1,5 @@
+import { useDriverRouteStore } from "@/store/driverRoute-store";
+import { useLocationStore } from "@/store/location-store";
 import Constants from "expo-constants";
 const URL = Constants.expoConfig?.extra?.API_URL;
 
@@ -156,4 +158,77 @@ export async function signup(
   }
 
   return data;
+}
+
+export async function publish() {
+  try {
+    const ride = useLocationStore.getState();
+    const route = useDriverRouteStore.getState();
+
+    // Basic validation
+    if (
+      !ride.pickupInfo ||
+      !ride.destInfo ||
+      !ride.vehicle ||
+      !ride.date ||
+      !ride.time
+    ) {
+      console.error("Missing required ride info");
+      return;
+    }
+    // 1️⃣ Publish the ride
+    const rideResponse = await fetch(`${URL}/rides`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: ride.id,
+        name: ride.name,
+        phone: ride.phone,
+        pickupInfo: ride.pickupInfo,
+        destInfo: ride.destInfo,
+        encodedPolyline: ride.encodedPolyline,
+        vehicle: ride.vehicle,
+        seats: ride.seats,
+        date: ride.date,
+        time: ride.time,
+        pricingModel: ride.pricingModel,
+        price: ride.price,
+      }),
+    });
+
+    const rideData = await rideResponse.json();
+
+    if (!rideResponse.ok) {
+      console.error("Failed to publish ride:", rideData.message);
+      return;
+    }
+
+    console.log("Ride published successfully:", rideData.ride);
+
+    // 2️⃣ Store the route (if route points exist)
+    if (route.points.length > 0) {
+      const routeResponse = await fetch(`${URL}/rides/store-route`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          riderId: rideData.ride._id, // Use the ride's DB ID
+          polylinePoints: route.points,
+        }),
+      });
+
+      const routeData = await routeResponse.json();
+
+      if (routeResponse.ok) {
+        return { ok: true, message: "Published ride successfully" };
+      } else {
+        console.error("Failed to store route:", routeData.message);
+      }
+    }
+
+    // Clear Zustand stores after successful publish
+    useLocationStore.getState().clearAll();
+    useDriverRouteStore.getState().clear();
+  } catch (error) {
+    console.error("Error publishing ride:", error);
+  }
 }

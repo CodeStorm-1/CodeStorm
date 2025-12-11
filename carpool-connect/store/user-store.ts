@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type UserState = {
+  id: string | null;
   email: string | null;
   phone: string | null;
   name: string | null;
@@ -15,6 +16,7 @@ type UserState = {
 export const useUserStore = create<UserState>()(
   persist(
     (set): UserState => ({
+      id: null,
       email: null,
       phone: null,
       name: null,

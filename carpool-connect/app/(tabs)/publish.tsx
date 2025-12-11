@@ -14,6 +14,10 @@ import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Toast from "react-native-toast-message";
+import { useLocationStore } from "@/store/location-store";
+import { set } from "date-fns";
+import { useUserStore } from "@/store/user-store";
 
 // -----------------------------------------------------------------
 // Refactored DestinationInput Component (for Pickup/Drop)
@@ -71,6 +75,12 @@ interface PlacePrediction {
   description: string;
   main_text: string;
 }
+
+interface CoOrds {
+  latitude: any;
+  longitude: any;
+  address: any;
+}
 // -----------------------------------------------------------------
 // Main PublishScreen Component
 // -----------------------------------------------------------------
@@ -79,16 +89,20 @@ export default function PublishScreen() {
   const router = useRouter();
 
   const [pickup, setPickup] = useState<string>("");
-  const [pickupInfo, setPickupInfo] = useState<string>("");
+  const [pickupInfo, setPickupInfo] = useState<CoOrds>();
+  const [DestInfo, setDestInfo] = useState<CoOrds>();
   const [drop, setDrop] = useState<string>("");
   const [sourcePredictions, setSourcePredictions] = useState<PlacePrediction[]>(
     []
   );
   const [destPredictions, setDestPredictions] = useState<PlacePrediction[]>([]);
-  const [openPickupModal, setOpenPickupModal] = useState(false);
-  const [openDropModal, setOpenDropModal] = useState(false);
 
-  const isSaveEnabled = pickup.trim().length > 0 && drop.trim().length > 0;
+  const setState = useLocationStore((state) => state.setState);
+
+  const id = useUserStore((state) => state.id);
+
+  const isSaveEnabled =
+    pickupInfo && DestInfo && pickupInfo?.address && DestInfo?.address;
 
   const fetchPlacePredictions = async (input: string, isSource: boolean) => {
     if (input.length < 3) return;
@@ -109,6 +123,39 @@ export default function PublishScreen() {
       }
     } catch (error) {
       console.error("Error fetching predictions:", error);
+    }
+  };
+
+  const getPlaceDetails = async (placeId: string, isSource: boolean) => {
+    try {
+      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${GOOGLE_API_KEY}&fields=geometry,formatted_address,name`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.result) {
+        const result = data.result;
+        const coords = {
+          latitude: result.geometry.location.lat,
+          longitude: result.geometry.location.lng,
+          address: result.formatted_address,
+        };
+
+        if (isSource) {
+          setPickupInfo(coords);
+          setPickup(result.formatted_address);
+          setSourcePredictions([]);
+        } else {
+          setDestInfo(coords);
+          setDrop(result.formatted_address);
+          setDestPredictions([]);
+        }
+      }
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        text1: "Error fetching place details",
+      });
     }
   };
 
@@ -144,30 +191,29 @@ export default function PublishScreen() {
             </Text>
           </View>
 
-          {/* ----- Destination Inputs (using the new component) ----- */}
-          {/* COMBINED both inputs into a single View with space-y-4 */}
           <View className="space-y-4 gap-6 my-4">
             {/* Pickup Input */}
             <DestinationInput
               type="Pickup"
-              value={pickupInfo}
+              value={pickup}
               onChangeText={(e) => {
                 setPickup(e);
-                setPickupInfo(e);
                 fetchPlacePredictions(e, true);
               }}
-              onClear={() => setPickupInfo("")}
+              onClear={() => {
+                setPickup("");
+                setPickupInfo(undefined);
+              }}
             />
-            {pickup.length > 3 ? (
+            {sourcePredictions.length > 0 ? (
               <View className="absolute left-0 right-0 top-full z-10 bg-white border dark:bg-zinc-800  h-64 mt-2 rounded-md">
                 <FlatList
                   data={sourcePredictions}
+                  keyExtractor={(item) => item.place_id}
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       onPress={() => {
-                        setPickupInfo(item.description);
-                        setPickup("");
-                        setOpenPickupModal(false);
+                        getPlaceDetails(item.place_id, true);
                       }}
                       className="px-4 py-4 border-b"
                     >
@@ -176,7 +222,6 @@ export default function PublishScreen() {
                       </Text>
                     </TouchableOpacity>
                   )}
-                  keyExtractor={(item) => item.place_id}
                 />
               </View>
             ) : (
@@ -188,9 +233,37 @@ export default function PublishScreen() {
             <DestinationInput
               type="Drop"
               value={drop}
-              onChangeText={setDrop}
-              onClear={() => setDrop("")}
+              onChangeText={(e) => {
+                setDrop(e);
+                fetchPlacePredictions(e, false);
+              }}
+              onClear={() => {
+                setDrop("");
+                setDestInfo(undefined);
+              }}
             />
+            {destPredictions.length > 0 ? (
+              <View className="absolute left-0 right-0 top-full z-10 bg-white border dark:bg-zinc-800  h-64 mt-2 rounded-md">
+                <FlatList
+                  data={destPredictions}
+                  keyExtractor={(item) => item.place_id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        getPlaceDetails(item.place_id, false);
+                      }}
+                      className="px-4 py-4 border-b"
+                    >
+                      <Text className="dark:text-white">
+                        {item.description}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            ) : (
+              <View></View>
+            )}
           </View>
 
           {/* Spacer to push inputs up */}
@@ -209,6 +282,8 @@ export default function PublishScreen() {
             activeOpacity={0.7}
             disabled={!isSaveEnabled}
             onPress={() => {
+              setState({ pickupInfo: pickupInfo! });
+              setState({ destInfo: DestInfo! });
               router.push("/publish_pages/intermediate");
             }}
             className={`rounded-2xl px-6 py-5 flex-row items-center border shadow-2xl ${

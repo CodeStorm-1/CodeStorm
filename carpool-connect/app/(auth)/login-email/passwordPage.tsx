@@ -17,6 +17,7 @@ import { login } from "@/app/config/api";
 import { useAuthStore } from "@/store/auth-store";
 import { useSignupStore } from "@/store/signup-store";
 import { useUserStore } from "@/store/user-store";
+import { set } from "date-fns";
 
 export default function SignInPasswordPage() {
   // Retrieve the email passed from the previous screen
@@ -57,6 +58,7 @@ export default function SignInPasswordPage() {
     setField("email", resp.user.email);
     setField("name", resp.user.name);
     setField("phone", resp.user.phone);
+    setField("id", resp.user._id);
 
     clear();
     clearlogin();

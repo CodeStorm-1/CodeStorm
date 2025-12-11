@@ -64,6 +64,7 @@ export default function NamePage() {
       }
 
       setToken(resp.token);
+      setFieldUser("id", resp.user._id);
       setFieldUser("email", email);
       setFieldUser("name", name);
       setFieldUser("phone", phone);

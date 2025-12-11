@@ -1,21 +1,14 @@
 import DriverRoutePoint from "../models/DriverRoutePoint.js";
 
-export async function findNearbyDrivers(passengerLat, passengerLng, radiusKm) {
+export async function findNearbyDrivers(lat, lng, radiusMeters) {
   const results = await DriverRoutePoint.find({
-    routePoint: {
+    routeLine: {
       $near: {
-        $geometry: {
-          type: "Point",
-          coordinates: [passengerLng, passengerLat],
-        },
-        $maxDistance: radiusKm * 1000,
+        $geometry: { type: "Point", coordinates: [lng, lat] },
+        $maxDistance: radiusMeters,
       },
     },
-  }).limit(500); // limit to avoid huge results
+  });
 
-  // Extract unique driverIds
-  const driverSet = new Set();
-  results.forEach((d) => driverSet.add(d.driverId));
-
-  return [...driverSet];
+  return results.map((r) => r.driverId);
 }
