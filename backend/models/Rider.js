@@ -21,7 +21,7 @@ const RideSchema = new mongoose.Schema(
 
     pricingModel: {
       type: String,
-      enum: ["per_km", "fixed"],
+      enum: ["per_km"],
       default: null,
     },
     price: { type: Number, default: null }, // For per km or fixed price

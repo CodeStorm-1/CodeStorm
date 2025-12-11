@@ -1,7 +1,11 @@
 import DriverRoutePoint from "../models/DriverRoutePoint.js";
 
-export async function storeRiderRoute(riderId, polylinePoints) {
-  // Filter out points with null/undefined latitude or longitude
+export async function storeRiderRoute(riderId, polylinePoints, date) {
+  if (!date) {
+    throw new Error("Date is required");
+  }
+
+  // Filter out invalid coordinates
   const validPoints = polylinePoints.filter(
     (p) =>
       p &&
@@ -15,11 +19,12 @@ export async function storeRiderRoute(riderId, polylinePoints) {
     throw new Error("No valid coordinates to store");
   }
 
-  // Map to GeoJSON [lng, lat] format
+  // Convert to [lng, lat]
   const lineStringPoints = validPoints.map((p) => [p.longitude, p.latitude]);
 
   await DriverRoutePoint.create({
     riderId,
+    date, // 🔥 storing date here
     route: {
       type: "LineString",
       coordinates: lineStringPoints,

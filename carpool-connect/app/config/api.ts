@@ -1,5 +1,6 @@
 import { useDriverRouteStore } from "@/store/driverRoute-store";
 import { useLocationStore } from "@/store/location-store";
+import { useUserStore } from "@/store/user-store";
 import Constants from "expo-constants";
 const URL = Constants.expoConfig?.extra?.API_URL;
 
@@ -211,8 +212,12 @@ export async function publish() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          riderId: rideData.ride._id, // Use the ride's DB ID
-          polylinePoints: route.points,
+          riderId: rideData.ride._id,
+          date: ride.date,
+          routePoints: route.points.map((point) => ({
+            type: "Point",
+            coordinates: [point.longitude, point.latitude], // lng, lat order
+          })),
         }),
       });
 
@@ -231,4 +236,149 @@ export async function publish() {
   } catch (error) {
     console.error("Error publishing ride:", error);
   }
+}
+
+// src/api/apiService.ts (or a new file like dataProcessor.ts)
+
+// You would need to handle the MAPS_API_KEY similar to how you get the URL
+const MAPS_API_KEY = "AIzaSyBvjcPaK4ZXgLeLjKNZN6i2NamuiHuhDdU";
+
+// --- Types (must match your database structure) ---
+interface LocationInfo {
+  latitude: number;
+  longitude: number;
+  _id?: string;
+}
+
+interface BackendRide {
+  _id: string;
+  pickupInfo: LocationInfo;
+  destInfo: LocationInfo;
+  encodedPolyline: string;
+  vehicle: string;
+  seats: number;
+  date: string;
+  price: number;
+  status: "booked" | "completed" | "cancelled";
+}
+
+// --- The output type (with addresses converted) ---
+export interface ProcessedRide extends BackendRide {
+  pickupAddress: string; // The new human-readable address field
+  dropAddress: string; // The new human-readable address field
+}
+
+const userId_ = useUserStore.getState().id;
+
+/**
+ * 1. Fetches the raw ride data for the authenticated user.
+ * 2. Reverse geocodes the pickup and drop coordinates into human-readable addresses.
+ * * @param token The user's authentication token (e.g., JWT).
+ * @returns A promise resolving to an array of ProcessedRide objects.
+ * @throws An error if the initial ride fetch fails.
+ */
+export async function fetchAndGeocodeRides() {
+  console.log("Starting ride fetch and geocoding process...");
+
+  // 1. Fetch Raw Rides Data
+  const FETCH_URL = `${URL}/rides`; // Assumed endpoint
+  let rawRides: BackendRide[];
+
+  try {
+    const response = await fetch(FETCH_URL, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to fetch booked rides (Status: ${response.status}). Details: ${errorText.slice(0, 100)}`
+      );
+    }
+
+    const data = await response.json();
+    // Adjust this line based on how your API returns the array (direct array or wrapped)
+
+    rawRides = Array.isArray(data) ? data : data?.rides || [];
+  } catch (error) {
+    console.error("Critical error during ride fetch:", error);
+    throw error; // Re-throw the error to be handled by the calling component
+  }
+
+  if (rawRides.length === 0) {
+    return []; // Return an empty array if no rides were found
+  }
+
+  // 2. Reverse Geocoding and Data Processing
+  const geocodePromises = rawRides.map(async (ride) => {
+    // Create an array of promises for concurrent geocoding
+    const [pickup, drop] = await Promise.all([
+      reverseGeocodeSingle(ride.pickupInfo),
+      reverseGeocodeSingle(ride.destInfo),
+    ]);
+
+    // Return the original ride data combined with the new addresses
+    return {
+      ...ride,
+      pickupAddress: pickup,
+      dropAddress: drop,
+    } as ProcessedRide;
+  });
+
+  // Wait for all geocoding promises to resolve
+  const processedRides = await Promise.all(geocodePromises);
+
+  return processedRides;
+}
+
+/**
+ * Internal utility function for a single geocoding call.
+ */
+async function reverseGeocodeSingle(location: LocationInfo): Promise<string> {
+  const latlng = `${location.latitude},${location.longitude}`;
+  const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latlng}&key=${MAPS_API_KEY}`;
+
+  try {
+    const response = await fetch(geocodeUrl);
+    const data = await response.json();
+
+    if (data.status === "OK" && data.results.length > 0) {
+      return data.results[0].formatted_address;
+    } else {
+      // Fallback for API status not OK or no results
+      return `Lat: ${location.latitude.toFixed(4)}, Lng: ${location.longitude.toFixed(4)}`;
+    }
+  } catch (error) {
+    // Fallback for network error
+    return `Lat: ${location.latitude.toFixed(4)}, Lng: ${location.longitude.toFixed(4)}`;
+  }
+}
+
+export async function changePassword(
+  userId: string,
+  oldPassword: string,
+  newPassword: string
+) {
+  const response = await fetch(`${URL}/auth/change-password`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      userId,
+      oldPassword,
+      newPassword,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Failed to change password");
+  }
+
+  return await response.json();
 }

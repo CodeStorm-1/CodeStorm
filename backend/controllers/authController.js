@@ -55,3 +55,41 @@ export const login = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// --- NEW FUNCTION: changePassword ---
+export const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.userId; // Extracted from JWT by the 'protect' middleware
+
+    if (!newPassword || newPassword.length < 6) {
+      return res
+        .status(400)
+        .json({ error: "New password must be at least 6 characters." });
+    }
+
+    // 1. Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // 2. Verify Old Password
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: "Incorrect old password." });
+    }
+
+    // 3. Hash the New Password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // 4. Update the password and save
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully." });
+  } catch (err) {
+    console.error("Change Password Error:", err);
+    res.status(500).json({ error: "Failed to update password." });
+  }
+};

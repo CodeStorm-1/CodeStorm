@@ -34,48 +34,38 @@ export default function PricingScreen({
   const isDarkMode = colorScheme === "dark";
 
   const [pricePerKm, setPricePerKm] = useState("15");
-  const [customPrice, setCustomPrice] = useState("");
-  const [pricingModel, setPricingModel] = useState<"per_km" | "fixed">(
+  const [pricingModel, setPricingModel] = useState<"per_km" | "fixed" | null>(
     "per_km"
   );
 
   const setState = useLocationStore((state) => state.setState);
 
   const isSaveEnabled =
-    pricingModel === "per_km"
-      ? pricePerKm.trim().length > 0 &&
-        !isNaN(parseFloat(pricePerKm)) &&
-        parseFloat(pricePerKm) > 0
-      : customPrice.trim().length > 0 &&
-        !isNaN(parseFloat(customPrice)) &&
-        parseFloat(customPrice) > 0;
+    pricePerKm.trim().length > 0 &&
+    !isNaN(parseFloat(pricePerKm)) &&
+    parseFloat(pricePerKm) > 0;
 
   const distanceKm = routeDistance
     ? parseFloat(routeDistance.replace(" km", ""))
     : 0;
 
   const estimatedTotal =
-    pricingModel === "per_km"
-      ? Math.round(distanceKm * parseFloat(pricePerKm || "0") * 100) / 100
-      : parseFloat(customPrice || "0");
+    Math.round(distanceKm * parseFloat(pricePerKm || "0") * 100) / 100;
 
   const handleConfirmPrice = async () => {
-    if (!pricePerKm && !customPrice) {
+    if (!pricePerKm) {
       Alert.alert("Error", "Please enter a price");
       return;
     }
 
-    const finalPrice =
-      pricingModel === "per_km"
-        ? parseFloat(pricePerKm)
-        : parseFloat(customPrice);
+    const finalPrice = parseFloat(pricePerKm);
 
     if (onSetPrice) {
       onSetPrice(finalPrice, estimatedTotal);
     }
 
     setState({
-      pricingModel: pricingModel,
+      pricingModel: pricingModel, // always "per_km" for now
       price: finalPrice,
     });
 
@@ -120,10 +110,10 @@ export default function PricingScreen({
         </View>
       )}
 
-      {/* Pricing Model Selection */}
+      {/* Pricing Model Selection (single option, UI layout kept) */}
       <Text style={styles.sectionLabel}>Choose Pricing Model:</Text>
       <View style={styles.modelRow}>
-        {/* Per KM Model */}
+        {/* Per KM Model – the only one now */}
         <TouchableOpacity
           style={[
             styles.modelCard,
@@ -157,138 +147,61 @@ export default function PricingScreen({
           )}
         </TouchableOpacity>
 
-        {/* Fixed Price */}
-        <TouchableOpacity
-          style={[
-            styles.modelCard,
-            pricingModel === "fixed" && styles.modelCardSelected,
-          ]}
-          onPress={() => setPricingModel("fixed")}
-        >
-          <MaterialCommunityIcons
-            name="tag-multiple"
-            size={32}
-            color={pricingModel === "fixed" ? "#3b82f6" : "#999"}
-          />
-          <Text
-            style={[
-              styles.modelLabel,
-              pricingModel === "fixed" && styles.modelLabelSelected,
-            ]}
-          >
-            Fixed Price
-          </Text>
-          <Text style={styles.modelSubtext}>Charge per seat</Text>
-
-          {pricingModel === "fixed" && (
-            <View style={styles.checkmark}>
-              <MaterialCommunityIcons
-                name="check-circle"
-                size={24}
-                color="#34C759"
-              />
-            </View>
-          )}
-        </TouchableOpacity>
+        {/* Dummy card to preserve layout but disabled */}
+        <View style={[styles.modelCard, { opacity: 0.3 }]}>
+          <MaterialCommunityIcons name="tag-multiple" size={32} color="#999" />
+          <Text style={styles.modelLabel}>Fixed Price</Text>
+          <Text style={styles.modelSubtext}>Coming soon</Text>
+        </View>
       </View>
 
       {/* Per KM Input */}
-      {pricingModel === "per_km" && (
-        <View style={styles.inputSection}>
-          <Text style={styles.sectionLabel}>Price Per Kilometer (₹)</Text>
+      <View style={styles.inputSection}>
+        <Text style={styles.sectionLabel}>Price Per Kilometer (₹)</Text>
 
-          <View style={styles.inputWrapper}>
-            <Text style={styles.currencySymbol}>₹</Text>
-            <TextInput
-              style={styles.input}
-              value={pricePerKm}
-              onChangeText={setPricePerKm}
-              placeholder="15"
-              placeholderTextColor={isDarkMode ? "#A0AEC0" : "#718096"}
-              keyboardType="decimal-pad"
-            />
-            <Text style={styles.unit}>/km</Text>
-          </View>
-
-          <Text style={styles.helperText}>
-            Common rates: ₹10–20 per km depending on vehicle
-          </Text>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.currencySymbol}>₹</Text>
+          <TextInput
+            style={styles.input}
+            value={pricePerKm}
+            onChangeText={setPricePerKm}
+            placeholder="15"
+            placeholderTextColor={isDarkMode ? "#A0AEC0" : "#718096"}
+            keyboardType="decimal-pad"
+          />
+          <Text style={styles.unit}>/km</Text>
         </View>
-      )}
 
-      {/* Fixed Price Input */}
-      {pricingModel === "fixed" && (
-        <View style={styles.inputSection}>
-          <Text style={styles.sectionLabel}>Price Per Seat (₹)</Text>
-
-          <View style={styles.inputWrapper}>
-            <Text style={styles.currencySymbol}>₹</Text>
-
-            <TextInput
-              style={styles.input}
-              value={customPrice}
-              onChangeText={setCustomPrice}
-              placeholder="100"
-              placeholderTextColor={isDarkMode ? "#A0AEC0" : "#718096"}
-              keyboardType="decimal-pad"
-            />
-
-            <Text style={styles.unit}>/seat</Text>
-          </View>
-
-          <Text style={styles.helperText}>
-            Set a fixed price for the entire ride
-          </Text>
-        </View>
-      )}
+        <Text style={styles.helperText}>
+          Common rates: ₹10–20 per km depending on vehicle
+        </Text>
+      </View>
 
       {/* Estimate Box */}
       {estimatedTotal > 0 && (
         <View style={styles.estimateBox}>
           <Text style={styles.estimateLabel}>💡 Estimated Price Breakdown</Text>
 
-          {pricingModel === "per_km" && (
-            <>
-              <View style={styles.estimateRow}>
-                <Text style={styles.estimateText}>Distance</Text>
-                <Text style={styles.estimateValue}>{distanceKm} km</Text>
-              </View>
+          <View style={styles.estimateRow}>
+            <Text style={styles.estimateText}>Distance</Text>
+            <Text style={styles.estimateValue}>{distanceKm} km</Text>
+          </View>
 
-              <View style={styles.estimateRow}>
-                <Text style={styles.estimateText}>Price per km</Text>
-                <Text style={styles.estimateValue}>
-                  ₹{parseFloat(pricePerKm).toFixed(2)}
-                </Text>
-              </View>
+          <View style={styles.estimateRow}>
+            <Text style={styles.estimateText}>Price per km</Text>
+            <Text style={styles.estimateValue}>
+              ₹{parseFloat(pricePerKm).toFixed(2)}
+            </Text>
+          </View>
 
-              <View style={styles.estimateSeparator} />
+          <View style={styles.estimateSeparator} />
 
-              <View style={styles.estimateRow}>
-                <Text style={styles.estimateTotalText}>Total (per seat)</Text>
-                <Text style={styles.estimateTotalValue}>
-                  ₹{estimatedTotal.toFixed(2)}
-                </Text>
-              </View>
-            </>
-          )}
-
-          {pricingModel === "fixed" && (
-            <>
-              <View style={styles.estimateRow}>
-                <Text style={styles.estimateText}>Price per seat</Text>
-                <Text style={styles.estimateValue}>₹{customPrice || "0"}</Text>
-              </View>
-
-              <View style={styles.estimateSeparator} />
-
-              <View style={styles.estimateRow}>
-                <Text style={styles.estimateTotalText}>Total (per seat)</Text>
-                <Text style={styles.estimateTotalValue}>
-                  ₹{estimatedTotal.toFixed(2)}
-                </Text>
-              </View>
-            </>
-          )}
+          <View style={styles.estimateRow}>
+            <Text style={styles.estimateTotalText}>Total (per seat)</Text>
+            <Text style={styles.estimateTotalValue}>
+              ₹{estimatedTotal.toFixed(2)}
+            </Text>
+          </View>
         </View>
       )}
 
@@ -301,7 +214,7 @@ export default function PricingScreen({
         </Text>
       </View>
 
-      {/* 🔥 NEW BUTTON — Publish Ride */}
+      {/* Publish Ride button */}
       <TouchableOpacity
         activeOpacity={0.7}
         disabled={!isSaveEnabled}

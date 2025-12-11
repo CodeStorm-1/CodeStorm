@@ -1,14 +1,43 @@
+// services/findNearbyDrivers.js
 import DriverRoutePoint from "../models/DriverRoutePoint.js";
 
-export async function findNearbyDrivers(lat, lng, radiusMeters) {
-  const results = await DriverRoutePoint.find({
-    routeLine: {
-      $near: {
-        $geometry: { type: "Point", coordinates: [lng, lat] },
-        $maxDistance: radiusMeters,
-      },
-    },
-  });
+// Haversine formula – calculates distance in meters between two points
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Earth radius in meters
+  const toRad = (x) => (x * Math.PI) / 180;
 
-  return results.map((r) => r.driverId);
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // meters
+}
+
+export async function findNearbyDrivers(lat, lng, radiusMeters = 5000, date) {
+  const formattedDate = new Date(date).toISOString().split("T")[0];
+
+  // Just get all drivers for that date (usually very few per day)
+  const allDriversToday = await DriverRoutePoint.find({
+    date: formattedDate,
+  }).lean();
+
+  const nearbyDriverIds = new Set();
+
+  for (const driver of allDriversToday) {
+    for (const point of driver.routePoints) {
+      const [pointLng, pointLat] = point.coordinates; // [lng, lat]
+
+      const distance = getDistance(lat, lng, pointLat, pointLng);
+
+      if (distance <= radiusMeters) {
+        nearbyDriverIds.add(driver.driverId);
+        break; // no need to check other points of this driver
+      }
+    }
+  }
+
+  return Array.from(nearbyDriverIds);
 }

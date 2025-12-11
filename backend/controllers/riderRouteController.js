@@ -30,7 +30,7 @@ export const storeRouteController = async (req, res) => {
  */
 export const findNearbyDriversController = async (req, res) => {
   try {
-    const { lat, lng, radiusMeters } = req.body;
+    const { lat, lng, radiusMeters, date } = req.body;
 
     if (lat == null || lng == null || radiusMeters == null) {
       return res.status(400).json({
@@ -39,7 +39,7 @@ export const findNearbyDriversController = async (req, res) => {
       });
     }
 
-    const drivers = await findNearbyDrivers(lat, lng, radiusMeters);
+    const drivers = await findNearbyDrivers(lat, lng, radiusMeters, date);
 
     res.status(200).json({ success: true, drivers });
   } catch (error) {

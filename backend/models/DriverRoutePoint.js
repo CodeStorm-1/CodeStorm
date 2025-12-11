@@ -1,22 +1,22 @@
+// models/DriverRoutePoint.js
 import mongoose from "mongoose";
 
 const DriverRouteSchema = new mongoose.Schema({
-  driverId: String,
-
-  route: {
-    type: {
-      type: String,
-      enum: ["LineString"],
-      default: "LineString",
+  driverId: { type: String, required: true },
+  date: { type: String, required: true }, // stored as 'YYYY-MM-DD'
+  routePoints: [
+    {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: {
+        type: [Number], // [lng, lat]
+        required: true,
+      },
     },
-    coordinates: {
-      type: [[Number]], // array -> [ [lng,lat], [lng,lat] ]
-      required: true,
-    },
-  },
+  ],
 });
 
-DriverRouteSchema.index({ route: "2dsphere" });
+// IMPORTANT: 2dsphere index on the array of GeoJSON points
+DriverRouteSchema.index({ routePoints: "2dsphere" });
 
 export default mongoose.models.DriverRoutePoint ||
   mongoose.model("DriverRoutePoint", DriverRouteSchema);
