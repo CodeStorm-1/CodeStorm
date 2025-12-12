@@ -1,3 +1,5 @@
+// routes/rides.js   ← Save this exact file
+
 import express from "express";
 import {
   createRide,
@@ -6,29 +8,37 @@ import {
   updateRide,
   deleteRide,
 } from "../controllers/riderController.js";
+
 import {
-  findNearbyDriversController,
   storeRouteController,
+  findNearbyDriversController,
 } from "../controllers/riderRouteController.js";
 
 const router = express.Router();
 
-// Create a new ride
-router.post("/", createRide);
+// VERY IMPORTANT: Specific routes MUST come BEFORE parameterized routes
 
+// 1. Store driver route (200+ points)
 router.post("/store-route", storeRouteController);
+
+// 2. Find nearby drivers
 router.post("/find", findNearbyDriversController);
 
-// Get a single ride by ID
-router.get("/:id", getRide);
+// 3. Create a new ride offer
+router.post("/", createRide);
 
-// Get all rides
+// 4. Get all rides (for browsing)
 router.get("/", getAllRides);
 
-// Update a ride by ID
+// 5. These come LAST — :id routes
+router.get("/:id", getRide);
 router.put("/:id", updateRide);
-
-// Delete a ride by ID
 router.delete("/:id", deleteRide);
+
+// Optional: Add this for debugging (remove in production)
+router.use((req, res, next) => {
+  console.log(`Rides Router → ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 export default router;

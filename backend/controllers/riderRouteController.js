@@ -7,7 +7,7 @@ import { findNearbyDrivers } from "../services/findNearbyDrivers.js";
  */
 export const storeRouteController = async (req, res) => {
   try {
-    const { riderId, polylinePoints } = req.body;
+    const { riderId, polylinePoints, date } = req.body;
 
     if (!riderId || !polylinePoints || !Array.isArray(polylinePoints)) {
       return res
@@ -15,7 +15,7 @@ export const storeRouteController = async (req, res) => {
         .json({ success: false, message: "Invalid riderId or polylinePoints" });
     }
 
-    await storeRiderRoute(riderId, polylinePoints);
+    await storeRiderRoute(riderId, polylinePoints, date);
 
     res.status(200).json({ success: true, message: "Rider route stored" });
   } catch (error) {

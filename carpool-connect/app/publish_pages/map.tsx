@@ -70,7 +70,6 @@ export default function PublishRide() {
   // Fetch routes between source and destination
   const fetchRoutes = async () => {
     if (!source || !destination) {
-      Alert.alert("Error", "Please select both source and destination");
       return;
     }
 

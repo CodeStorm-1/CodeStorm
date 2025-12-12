@@ -177,6 +177,8 @@ export async function publish() {
       console.error("Missing required ride info");
       return;
     }
+
+    console.log(ride.id);
     // 1️⃣ Publish the ride
     const rideResponse = await fetch(`${URL}/rides`, {
       method: "POST",
@@ -206,18 +208,19 @@ export async function publish() {
 
     console.log("Ride published successfully:", rideData.ride);
 
+    const userStore = useUserStore.getState();
+    const driverId = userStore.id; // or userStore.userId
+
+    console.log(route.points);
     // 2️⃣ Store the route (if route points exist)
     if (route.points.length > 0) {
       const routeResponse = await fetch(`${URL}/rides/store-route`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          riderId: rideData.ride._id,
+          riderId: driverId,
           date: ride.date,
-          routePoints: route.points.map((point) => ({
-            type: "Point",
-            coordinates: [point.longitude, point.latitude], // lng, lat order
-          })),
+          polylinePoints: route.points,
         }),
       });
 
@@ -225,8 +228,6 @@ export async function publish() {
 
       if (routeResponse.ok) {
         return { ok: true, message: "Published ride successfully" };
-      } else {
-        console.error("Failed to store route:", routeData.message);
       }
     }
 
